@@ -12,6 +12,7 @@ import (
     "flag"
     "sync"
     "github.com/prometheus/client_golang/prometheus"
+    "github.com/prometheus/client_golang/prometheus/promhttp"
     "github.com/prometheus/common/log"
     "github.com/prometheus/common/version"
 )
@@ -22,6 +23,7 @@ type ChannelInfo struct {
 var (
     showVersion = flag.Bool("Version", false, "Print version number and exit")
     listenAddress = flag.String("web.listen-address", ":9463", "IP And Port to expose metrics on")
+    modemIP = flag.String("modemIP", "192.168.100.1", "IP address of modem")
     timeout = flag.Duration("timeout", 5*time.Second, "Timeout for scrapes")
     metricsPath = flag.String("web.telemetry-path", "/metrics", "Path to metrics")
 
@@ -50,7 +52,7 @@ func start() {
                        `<p><a href="` + *metricsPath + `">Metrics</a></p>` +
                        `</body></html>`))
     })
-    http.Handle(*metricsPath, prometheus.Handler())
+    http.Handle(*metricsPath, promhttp.Handler())
     log.Infof("Metrics exposed at %s on %s", *metricsPath, *listenAddress)
     log.Fatal(http.ListenAndServe(*listenAddress, nil))
 
@@ -65,7 +67,7 @@ func (p *PrometheusExporter) Collect(ch chan<- prometheus.Metric) {
         Timeout: time.Second * 30,
     }
     // Get Docsis Stats
-    response, err := httpClient.Get(fmt.Sprintf("http://%s/walk?oids=1.3.6.1.2.1.10.127.1.1.1;", "192.168.100.1"))
+    response, err := httpClient.Get(fmt.Sprintf("http://%s/walk?oids=1.3.6.1.2.1.10.127.1.1.1;", *modemIP))
     if err != nil {
         //LOG
         fmt.Println(err)
@@ -119,7 +121,7 @@ func (p *PrometheusExporter) Collect(ch chan<- prometheus.Metric) {
     }
 
     // Get Docsis Stats
-    snr_resp, err := httpClient.Get(fmt.Sprintf("http://192.168.100.1/walk?oids=1.3.6.1.4.1.4491.2.1.20.1.24.1.1;"))
+    snr_resp, err := httpClient.Get(fmt.Sprintf("http://%s/walk?oids=1.3.6.1.4.1.4491.2.1.20.1.24.1.1;", *modemIP))
     if err != nil {
         //LOG
         fmt.Println(err)
@@ -147,7 +149,7 @@ func (p *PrometheusExporter) Collect(ch chan<- prometheus.Metric) {
      }
 
 
-     up_resp, err := httpClient.Get(fmt.Sprintf("http://192.168.100.1/walk?oids=1.3.6.1.4.1.4115.1.3.4.1.9.2;"))
+     up_resp, err := httpClient.Get(fmt.Sprintf("http://%s/walk?oids=1.3.6.1.4.1.4115.1.3.4.1.9.2;", *modemIP))
      if err != nil {
      }
      defer up_resp.Body.Close()
@@ -184,7 +186,7 @@ func (p *PrometheusExporter) Collect(ch chan<- prometheus.Metric) {
          }
      }
 
-    usp_resp, err := httpClient.Get(fmt.Sprintf("http://192.168.100.1/walk?oids=1.3.6.1.4.1.4491.2.1.20.1.2.1.1;"))
+    usp_resp, err := httpClient.Get(fmt.Sprintf("http://%s/walk?oids=1.3.6.1.4.1.4491.2.1.20.1.2.1.1;", *modemIP))
     if err != nil {
         //LOG
         fmt.Println(err)
